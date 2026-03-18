@@ -58,16 +58,28 @@ wb = load_workbook(file_path)
 ws = wb.active
 
 # 找空行：检查是否有实际数据值（有文字、数字就是有数据，公式不算）
+# 但如果整行只有公式没有实际数据，也视为空行
 next_row = 2
 for row in range(2, 110):
     has_real_data = False
+    has_only_formula = False
     for col in range(1, 9):
         val = ws.cell(row, col).value
-        # 有实际数据值（不是None也不是以=开头的公式）
-        if val is not None and not (isinstance(val, str) and val.startswith('=')):
-            has_real_data = True
-            break
-    if not has_real_data:
+        if val is not None:
+            if isinstance(val, str) and val.startswith('='):
+                has_only_formula = True
+            else:
+                has_real_data = True
+                break
+    # 有实际数据才停止，否则继续找
+    if has_real_data:
+        next_row = row + 1
+    elif has_only_formula:
+        # 只有公式，视为空行
+        next_row = row
+        break
+    else:
+        # 完全是空的
         next_row = row
         break
 
