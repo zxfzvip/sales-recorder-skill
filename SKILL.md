@@ -55,11 +55,17 @@ file_path = f'/Users/mac/Desktop/拿货记数/{target}.xlsx'
 wb = load_workbook(file_path)
 ws = wb.active
 
-# 找空行：必须整行都是空的才能用（A到H列都为空）
+# 找空行：检查是否有实际数据值（有文字、数字就是有数据，公式不算）
 next_row = 2
 for row in range(2, 110):
-    is_empty = all(ws.cell(row, col).value is None for col in range(1, 9))
-    if is_empty:
+    has_real_data = False
+    for col in range(1, 9):
+        val = ws.cell(row, col).value
+        # 有实际数据值（不是None也不是以=开头的公式）
+        if val is not None and not (isinstance(val, str) and val.startswith('=')):
+            has_real_data = True
+            break
+    if not has_real_data:
         next_row = row
         break
 
