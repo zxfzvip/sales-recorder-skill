@@ -75,13 +75,6 @@ if expr_count:
     ws.cell(next_row, 8).value = f"=F{next_row}*G{next_row}"  # 快递合计
 
 wb.save(file_path)
-
-# 录入后检查：删除刚录入行后面的空行，保持紧凑
-if next_row + 1 <= 109:
-    next_is_empty = all(ws.cell(next_row + 1, col).value is None for col in range(1, 9))
-    if next_is_empty:
-        ws.delete_rows(next_row + 1)
-        wb.save(file_path)
 ```
 
 ## 确认回复
