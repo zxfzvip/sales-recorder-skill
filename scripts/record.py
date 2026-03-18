@@ -20,9 +20,12 @@ def record_inventory(target: str, date: str = None, product: str = None, qty: fl
                 next_row = row
                 break
         
-        # 日期填入A列
+        # 日期填入A列：如果上一行已经有日期，这行就不填
         if date:
-            ws.cell(next_row, 1).value = date
+            # 检查上一行是否有日期
+            prev_date = ws.cell(next_row - 1, 1).value if next_row > 2 else None
+            if not prev_date:
+                ws.cell(next_row, 1).value = date
         
         if product:
             ws.cell(next_row, 2).value = product
