@@ -43,21 +43,28 @@ def record_inventory(target: str, date: str = None, product: str = None, qty: fl
         subtotal = (qty or 0) * (price or 0) if qty and price else None
         expr_subtotal = (expr_count or 0) * (expr_price or 0) if expr_count and expr_price else None
         
-        # 构建回复
+        # 构建回复 - 表格形式
         result = f"✅ 已添加到 {target}.xlsx 第{next_row}行！\n\n"
         
-        if date:
-            result += f"**日期：** {date}\n\n"
+        # 表头
+        result += "| 行 | 日期 | 商品 | 数量 | 单价 | 小计 | 快递 | 快递费 | 快递小计 |\n"
+        result += "|----|------|------|------|------|------|------|--------|----------|\n"
         
+        # 商品行
         if product and qty and price:
-            result += f"| 商品 | 数量 | 单价 | 小计 |\n"
-            result += f"|------|------|------|------|\n"
-            result += f"| {product} | {qty} | {price} | ¥{subtotal:.2f} |\n"
+            p_row = f"| {next_row} | {date or ''} | {product} | {int(qty)} | {price} | ¥{subtotal:.0f} |"
+        else:
+            p_row = f"| {next_row} | {date or ''} | | | | |"
         
+        # 快递行
         if expr_count and expr_price:
-            result += f"\n| 快递单数 | 快递价格 | 小计 |\n"
-            result += f"|----------|----------|------|\n"
-            result += f"| {int(expr_count)} | {expr_price} | ¥{expr_subtotal:.2f} |\n"
+            e_row = f"| | | | | | | {int(expr_count)} | {expr_price} | ¥{expr_subtotal:.0f} |"
+        else:
+            e_row = ""
+        
+        result += p_row + "\n"
+        if e_row:
+            result += e_row + "\n"
         
         result += "\n继续 📝"
         return result
