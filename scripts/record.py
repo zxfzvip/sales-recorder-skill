@@ -18,6 +18,7 @@ def record_inventory(target: str, product: str = None, qty: float = None, price:
             if is_b_empty and is_f_empty:
                 next_row = row
                 break
+        
         if product:
             ws.cell(next_row, 2).value = product
             ws.cell(next_row, 3).value = qty or 0
@@ -27,8 +28,29 @@ def record_inventory(target: str, product: str = None, qty: float = None, price:
             ws.cell(next_row, 6).value = expr_count
             ws.cell(next_row, 7).value = expr_price or 0
             ws.cell(next_row, 8).value = f"=F{next_row}*G{next_row}"
+        
         wb.save(file_path)
-        return f"成功记录到第 {next_row} 行。"
+        
+        # 计算小计
+        subtotal = (qty or 0) * (price or 0) if qty and price else None
+        expr_subtotal = (expr_count or 0) * (expr_price or 0) if expr_count and expr_price else None
+        
+        # 构建回复
+        result = f"✅ 已添加到 {target}.xlsx 第{next_row}行！\n\n"
+        
+        if product and qty and price:
+            result += f"| 商品 | 数量 | 单价 | 小计 |\n"
+            result += f"|------|------|------|------|\n"
+            result += f"| {product} | {qty} | {price} | ¥{subtotal:.2f} |\n"
+        
+        if expr_count and expr_price:
+            result += f"\n| 快递单数 | 快递价格 | 小计 |\n"
+            result += f"|----------|----------|------|\n"
+            result += f"| {int(expr_count)} | {expr_price} | ¥{expr_subtotal:.2f} |\n"
+        
+        result += "\n继续 📝"
+        return result
+        
     except Exception as e:
         return f"错误: {str(e)}"
 
