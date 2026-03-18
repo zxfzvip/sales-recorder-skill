@@ -1,124 +1,49 @@
 ---
 name: sales-recorder
-description: 记录每日销售数据到Excel表格。用户发送商品销售信息（日期、商品、数量、单价、快递单数、快递费）时，自动录入到桌面「拿货记数/{表格名}.xlsx」，包含公式自动计算小计。
+description: 销售记账技能。当用户提到"记账"、"录入"、"拿货"、"记一下"、"记录销售"等关键词时，自动提取商品信息并记录到Excel表格。用于记录每日销售数据，包括商品名称、数量、单价、快递数量、快递费等。默认表格为"拿货记录.xlsx"。
 ---
 
-# 销售记数
+# 销售记账技能
 
-## 表格位置
+## 触发条件
 
-| 表格 | 路径 |
-|------|------|
-| 弟弟 | `/Users/mac/Desktop/拿货记数/弟弟.xlsx` |
-| 央央 | `/Users/mac/Desktop/拿货记数/央央.xlsx` |
-| 宝宝 | `/Users/mac/Desktop/拿货记数/宝宝.xlsx` |
-| 超宝 | `/Users/mac/Desktop/拿货记数/超宝.xlsx` |
-| 薛泽凯 | `/Users/mac/Desktop/拿货记数/薛泽凯.xlsx` |
+当用户提到以下关键词时激活：
+- 记账、录入、拿货、记录
+- "记一下"、"记一笔"、"记个账"
+- 快递相关（快递数量、快递费）
 
-## 规则
+## 参数提取
 
-**用户说记到哪个表格就记到哪个表格。**
+从用户消息中提取：
+- **商品名称**：如"苹果"、"香蕉"等
+- **数量**：支持"50斤"、"30个"等格式，提取数字
+- **单价**：支持"单价4元"、"4元/斤"等格式
+- **快递数量**：支持"快递2单"、"快递2个"等
+- **快递费**：支持"每单10元"、"快递费10元"等
+- **文件名**：可选，默认"拿货记录"
 
-**商品和快递同时发的，记在同一行。**
+## 执行方式
 
-## 表格结构
+1. 解析用户消息中的各项参数
+2. 使用 exec 执行 Python 脚本：
+   ```bash
+   cd ~/.openclaw/skills/sales-recorder/scripts && python3 record.py <target> <product> <qty> <price> <expr_count> <expr_price>
+   ```
+3. 返回执行结果
 
-| A列 | B列 | C列 | D列 | E列 | F列 | G列 | H列 |
-|-----|-----|-----|-----|-----|-----|-----|-----|
-| 日期 | 商品 | 数量 | 单价 | 合计 | 快递单数 | 价格 | 合计 |
+## 示例
 
-- E列公式：`=C列*D列`
-- H列公式：`=F列*G列`
+用户说："记一下苹果 50 斤，单价 4 元，快递 2 单，每单 10 元"
 
-## 解析用户消息格式
+解析参数：
+- target: 拿货记录
+- product: 苹果
+- qty: 50
+- price: 4
+- expr_count: 2
+- expr_price: 10
 
-用户可能发送的格式：
-- `润滑油 数量10价格5快递10价格2.8 填写到央央`
-- `风流果10价格5.5快递3价格2.8 填写到央央`
-- `润滑油10价格5快递2价格2.8 填写到弟弟`
-- `快递10价格10 填写到薛泽凯`
-- `高潮液数量10价格5 填写到薛泽凯`
-
-解析逻辑：
-1. 提取目标表格：查找"弟弟"、"央央"、"宝宝"、"超宝"、"薛泽凯"等关键词
-2. 提取商品：匹配商品名称
-3. 提取数量：`数量(\d+)` 或直接数字
-4. 提取单价：`价格(\d+\.?\d*)`
-5. 提取快递单数：`快递(\d+)`
-6. 提取快递价格：第二个`价格(\d+\.?\d*)`或`快递价格(\d+\.?\d*)`
-
-## 录入流程
-
-```python
-from openpyxl import load_workbook
-
-file_path = f'/Users/mac/Desktop/拿货记数/{target}.xlsx'
-
-wb = load_workbook(file_path)
-ws = wb.active
-
-# 找空行：检查是否有实际数据值（有文字、数字就是有数据，公式不算）
-# 但如果整行只有公式没有实际数据，也视为空行
-next_row = 2
-for row in range(2, 110):
-    has_real_data = False
-    has_only_formula = False
-    for col in range(1, 9):
-        val = ws.cell(row, col).value
-        if val is not None:
-            if isinstance(val, str) and val.startswith('='):
-                has_only_formula = True
-            else:
-                has_real_data = True
-                break
-    # 有实际数据就继续找下一行
-    if has_real_data:
-        continue
-    # 没有实际数据（有公式或完全空），就是空行
-    next_row = row
-    break
-
-# 如果是录入快递，检查上一行是否已经有快递记录
-# 上一行有快递（F列和G列都有值），就往下再找一行
-if expr_count and next_row > 2:
-    prev_expr_count = ws.cell(next_row - 1, 6).value
-    prev_expr_price = ws.cell(next_row - 1, 7).value
-    if prev_expr_count is not None and prev_expr_price is not None:
-        # 上一行已有快递，继续往下找空行
-        for row in range(next_row + 1, 110):
-            has_real_data = False
-            for col in range(1, 9):
-                val = ws.cell(row, col).value
-                if val is not None and not (isinstance(val, str) and val.startswith('=')):
-                    has_real_data = True
-                    break
-            if not has_real_data:
-                next_row = row
-                break
-
-# 写入数据
-ws.cell(next_row, 2).value = product  # 商品
-ws.cell(next_row, 3).value = qty      # 数量
-ws.cell(next_row, 4).value = price    # 单价
-ws.cell(next_row, 5).value = f"=C{next_row}*D{next_row}"  # 合计
-
-if expr_count:
-    ws.cell(next_row, 6).value = expr_count  # 快递单数
-    ws.cell(next_row, 7).value = expr_price  # 快递价格
-    ws.cell(next_row, 8).value = f"=F{next_row}*G{next_row}"  # 快递合计
-
-wb.save(file_path)
+执行命令：
+```bash
+python3 record.py 拿货记录 苹果 50 4 2 10
 ```
-
-## 确认回复
-
-录入完成后，回复格式：
-```
-✅ 已添加到 {表格名}.xlsx 第{row}行！
-
-| 商品 | 数量 | 单价 | 小计 | 快递单数 |
-|------|------|------|------|----------|
-| {商品} | {数量} | {单价} | ¥{小计} | {快递单数或"（留空）"} |
-```
-
-然后提示用户继续：`继续 📝`
