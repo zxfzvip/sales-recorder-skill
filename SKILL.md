@@ -71,17 +71,12 @@ for row in range(2, 110):
             else:
                 has_real_data = True
                 break
-    # 有实际数据才停止，否则继续找
+    # 有实际数据就继续找下一行
     if has_real_data:
-        next_row = row + 1
-    elif has_only_formula:
-        # 只有公式，视为空行
-        next_row = row
-        break
-    else:
-        # 完全是空的
-        next_row = row
-        break
+        continue
+    # 没有实际数据（有公式或完全空），就是空行
+    next_row = row
+    break
 
 # 如果是录入快递，检查上一行是否已经有快递记录
 # 上一行有快递（F列和G列都有值），就往下再找一行
