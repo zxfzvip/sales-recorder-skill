@@ -75,23 +75,27 @@ def record_inventory(target: str, date: str = None, product: str = None, qty: fl
 def parse_args(msg: str):
     """解析用户消息，提取参数"""
     # 提取目标表格
-    tables = ["弟弟", "央央", "宝宝", "超宝", "薛泽凯"]
+    tables = ["弟弟", "央央", "宝宝", "超宝", "薛泽凯", "锐"]
     target = "弟弟"  # 默认
     for t in tables:
         if t in msg:
             target = t
             break
     
-    # 提取日期：匹配 3月18、3月18号 等
-    date_match = re.search(r'(\d+月)?(\d+)号?', msg)
+    # 提取日期：匹配 X月Y号 或 Y号 格式（必须带"号"才是日期）
+    date_match = re.search(r'(\d+)月(\d+)号|(\d+)号', msg)
     date = None
     if date_match:
-        month = date_match.group(1) or ""
-        day = date_match.group(2) or ""
-        date = f"{month}{day}号" if month else f"{day}号"
+        if date_match.group(1):  # X月Y号格式
+            month = date_match.group(1)
+            day = date_match.group(2)
+            date = f"{month}月{day}号"
+        else:  # Y号格式
+            day = date_match.group(3)
+            date = f"{day}号"
     
     # 提取商品
-    products = ["风流果", "风流", "润滑油", "润滑", "润滑液", "高潮液", "延时喷剂", "延时膏"]
+    products = ["风流果", "风流", "润滑油", "润滑", "润滑液", "高潮液", "延时喷剂", "延时膏", "阳具", "川井 依克多因", "川井"]
     product = None
     for p in products:
         if p in msg:
@@ -111,16 +115,28 @@ def parse_args(msg: str):
     qty_match = re.search(r'数量(\d+)', msg)
     qty = float(qty_match.group(1)) if qty_match else None
     
-    # 提取单价（第二个价格，或者"价格"后面的数字）
-    price_matches = re.findall(r'价格(\d+\.?\d*)', msg)
-    price = float(price_matches[0]) if price_matches else None
+    # 提取快递数量和快递价格（先提取快递相关）
+    expr_match = re.search(r'快递(\d+)价格(\d+\.?\d*)', msg)
+    if expr_match:
+        expr_count = float(expr_match.group(1))
+        expr_price = float(expr_match.group(2))
+    else:
+        # 只匹配快递数量
+        expr_count_match = re.search(r'快递(\d+)', msg)
+        expr_count = float(expr_count_match.group(1)) if expr_count_match else None
+        expr_price = None
     
-    # 提取快递数量
-    expr_count_match = re.search(r'快递(\d+)', msg)
-    expr_count = float(expr_count_match.group(1)) if expr_count_match else None
-    
-    # 提取快递价格（第二个价格）
-    expr_price = float(price_matches[1]) if len(price_matches) > 1 else None
+    # 提取商品价格
+    # 优先提取"商品价格"中的价格
+    if product:
+        price_match = re.search(rf'{re.escape(product)}.*?价格(\d+\.?\d*)', msg)
+        if not price_match:
+            # 尝试从"数量X价格Y"中提取
+            price_match = re.search(r'数量\d+价格(\d+\.?\d*)', msg)
+        price = float(price_match.group(1)) if price_match else None
+    else:
+        # 没有商品时，价格应该归快递
+        price = None
     
     return target, date, product, qty, price, expr_count, expr_price
 
@@ -141,7 +157,7 @@ if __name__ == "__main__":
         msg = " ".join(sys.argv[1:]) if len(sys.argv) > 1 else ""
         target, date, product, qty, price, expr_count, expr_price = parse_args(msg)
         
-        if not product:
-            print("无法识别商品，请重试")
+        if not product and not expr_count:
+            print("无法识别商品或快递，请重试")
         else:
             print(record_inventory(target, date, product, qty, price, expr_count, expr_price))
