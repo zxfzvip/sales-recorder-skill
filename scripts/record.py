@@ -72,7 +72,7 @@ def record_inventory(target: str, date: str = None, product: str = None, qty: fl
 def parse_args(msg: str):
     """解析用户消息，提取参数"""
     # 提取目标表格
-    tables = ["弟弟", "央央", "宝宝", "超宝", "薛泽凯", "锐"]
+    tables = ["弟弟", "央央", "宝宝", "超宝", "薛泽凯", "锐", "凯"]
     target = "弟弟"  # 默认
     for t in tables:
         if t in msg:
