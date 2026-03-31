@@ -110,7 +110,17 @@ def parse_args(msg: str):
     
     # 提取数量
     qty_match = re.search(r'数量(\d+)', msg)
-    qty = float(qty_match.group(1)) if qty_match else None
+    if qty_match:
+        qty = float(qty_match.group(1))
+    elif product:
+        # 尝试匹配"商品名+数字"格式，如"风流果2"
+        product_qty_match = re.search(rf'{re.escape(product)}(\d+)', msg)
+        if product_qty_match:
+            qty = float(product_qty_match.group(1))
+        else:
+            qty = None
+    else:
+        qty = None
     
     # 提取快递数量和快递价格（先提取快递相关）
     expr_match = re.search(r'快递(\d+)价格(\d+\.?\d*)', msg)
@@ -131,9 +141,16 @@ def parse_args(msg: str):
             # 尝试从"数量X价格Y"中提取
             price_match = re.search(r'数量\d+价格(\d+\.?\d*)', msg)
         price = float(price_match.group(1)) if price_match else None
+        # 风流果默认价格5.5
+        if product == "风流果" and not price:
+            price = 5.5
     else:
         # 没有商品时，价格应该归快递
         price = None
+    
+    # 快递价格默认2.8
+    if expr_count is not None and expr_price is None:
+        expr_price = 2.8
     
     return target, date, product, qty, price, expr_count, expr_price
 
